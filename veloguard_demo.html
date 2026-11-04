@@ -1,0 +1,789 @@
+<title>VeloGuard Demo Console</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: sticky teal header + tab bar over a single working column; the live desk demo is the centrepiece.
+   Palette follows the team handbook: deep teal, signal teal, plain neutrals. */
+:root{
+  --bg:#eef3f3; --surface:#ffffff; --surface2:#e6eeee; --ink:#11282e; --muted:#50666c; --line:#cfdcdd;
+  --brand:#154c59; --brand-ink:#ffffff; --accent:#0a7872; --accent-soft:#d8efec;
+  --warn:#9a5b00; --warn-soft:#fdf0d5; --bad:#b3261e; --bad-soft:#fbe1de; --good:#18733f; --good-soft:#dcf1e4;
+  --canvas:#1b2528;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0c1a1d; --surface:#122428; --surface2:#1a3136; --ink:#e2eeef; --muted:#97b0b4; --line:#27424a;
+  --brand:#0e3a44; --brand-ink:#f1fafa; --accent:#46c4bb; --accent-soft:#143f43;
+  --warn:#f0b64e; --warn-soft:#3a2d10; --bad:#ff8a80; --bad-soft:#3d1a18; --good:#6fd79a; --good-soft:#143323; --canvas:#0a1113; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0c1a1d; --surface:#122428; --surface2:#1a3136; --ink:#e2eeef; --muted:#97b0b4; --line:#27424a;
+  --brand:#0e3a44; --brand-ink:#f1fafa; --accent:#46c4bb; --accent-soft:#143f43;
+  --warn:#f0b64e; --warn-soft:#3a2d10; --bad:#ff8a80; --bad-soft:#3d1a18; --good:#6fd79a; --good-soft:#143323; --canvas:#0a1113; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5;margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{background:var(--brand);color:var(--brand-ink)}
+header.top .wrap{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding-block:12px}
+.brand{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+.brand b{font-size:20px;letter-spacing:.06em}
+.brand span{font-size:12px;letter-spacing:.12em;text-transform:uppercase;opacity:.8}
+.hbtns{display:flex;gap:8px;align-items:center}
+.status{background:var(--warn-soft);color:var(--warn);border-bottom:1px solid var(--line);font-size:13px}
+.status .wrap{padding-block:7px;display:flex;gap:8px 18px;flex-wrap:wrap}
+.status b{letter-spacing:.04em}
+nav.tabs{background:var(--surface);border-bottom:1px solid var(--line);position:sticky;top:env(safe-area-inset-top,0px);z-index:5}
+nav.tabs .wrap{display:flex;gap:2px;overflow-x:auto}
+nav.tabs button{background:none;border:0;border-bottom:3px solid transparent;color:var(--muted);font:600 14px var(--sans);padding:12px 12px;cursor:pointer;white-space:nowrap}
+nav.tabs button[aria-selected=true]{color:var(--accent);border-bottom-color:var(--accent)}
+nav.tabs button:hover{color:var(--ink)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+main{padding-block:20px 56px}
+section.panel{display:none}
+section.panel.on{display:block}
+h1{font-size:28px;line-height:1.15;margin:0 0 8px;text-wrap:balance}
+h2{font-size:19px;margin:0 0 8px;text-wrap:balance}
+h3{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin:0 0 6px}
+p{margin:0 0 10px;max-width:70ch}
+.lead{font-size:17px;color:var(--muted);max-width:68ch}
+.grid{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr))}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:16px;min-width:0}
+.card.flat{background:var(--surface2);border-color:transparent}
+.pipe{display:flex;flex-wrap:wrap;gap:6px;align-items:stretch;margin:12px 0}
+.pipe div{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:8px 10px;font-size:13px;flex:1 1 130px;min-width:0}
+.pipe div b{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.pipe i{align-self:center;color:var(--muted);font-style:normal}
+.chip{display:inline-block;font:600 11px var(--sans);letter-spacing:.06em;text-transform:uppercase;padding:2px 8px;border-radius:10px;background:var(--surface2);color:var(--muted)}
+.chip.good{background:var(--good-soft);color:var(--good)}.chip.bad{background:var(--bad-soft);color:var(--bad)}.chip.warn{background:var(--warn-soft);color:var(--warn)}.chip.acc{background:var(--accent-soft);color:var(--accent)}
+button.btn,.btn{font:600 13px var(--sans);background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:8px 12px;cursor:pointer}
+.btn:hover{border-color:var(--accent)}
+.btn.pri{background:var(--accent);color:#fff;border-color:var(--accent)}
+:root[data-theme="dark"] .btn.pri{color:#06201e}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .btn.pri{color:#06201e}}
+.btn.bad{color:var(--bad)}.btn.good{color:var(--good)}
+.btn[disabled]{opacity:.45;cursor:not-allowed}
+.hbtns .btn{background:transparent;color:var(--brand-ink);border-color:rgba(255,255,255,.4)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th{background:var(--brand);color:var(--brand-ink);text-align:left;padding:7px 9px;font-size:12px}
+td{padding:7px 9px;border-bottom:1px solid var(--line);vertical-align:top}
+tbody tr:nth-child(even) td{background:var(--surface2)}
+.tw{overflow-x:auto}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.num{font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.small{font-size:13px}
+label{font-size:12px;color:var(--muted);display:flex;flex-direction:column;gap:3px}
+input[type=number],input[type=text],select{font:14px var(--mono);background:var(--surface);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:6px 8px;width:100%;min-width:0}
+/* demo */
+.demo{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:16px}
+@media(max-width:900px){.demo{grid-template-columns:minmax(0,1fr)}}
+.stage{background:var(--canvas);border-radius:6px;padding:8px;position:relative}
+canvas{display:block;width:100%;height:auto;border-radius:3px}
+#view{cursor:crosshair;touch-action:none}
+.banner{position:absolute;left:14px;top:14px;background:rgba(0,0,0,.65);color:#fff;font:600 11px var(--sans);letter-spacing:.08em;padding:3px 8px;border-radius:3px;text-transform:uppercase}
+.state{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding:10px 12px;border-radius:5px;font-weight:700;margin-bottom:10px;background:var(--surface2)}
+.state.cand{background:var(--bad-soft);color:var(--bad)}
+.state.ok{background:var(--good-soft);color:var(--good)}
+.led{display:inline-flex;align-items:center;gap:8px;font:600 12px var(--sans);color:var(--muted)}
+.led i{width:14px;height:14px;border-radius:50%;background:var(--surface2);border:2px solid var(--line);display:inline-block}
+.led.on i{background:#ff3b30;border-color:#ff3b30;box-shadow:0 0 10px #ff3b30}
+.sc{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+.ev{border:1px solid var(--line);border-radius:5px;padding:10px;background:var(--surface);display:grid;grid-template-columns:120px minmax(0,1fr);gap:10px;margin-bottom:8px}
+.ev.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.ev img,.ev canvas{width:120px;height:auto;border-radius:3px;background:var(--canvas)}
+@media(max-width:480px){.ev{grid-template-columns:1fr}.ev img,.ev canvas{width:100%}}
+.readout{font:12px var(--mono);background:var(--surface2);padding:8px 10px;border-radius:4px;overflow-x:auto;white-space:pre;min-height:60px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:13px}
+.kv dt{color:var(--muted)}.kv dd{margin:0}
+.big{font:700 26px var(--mono);font-variant-numeric:tabular-nums}
+.sheet td.n,.sheet th.n{text-align:right;font-variant-numeric:tabular-nums}
+.timer{font:700 56px var(--mono);font-variant-numeric:tabular-nums;line-height:1}
+.beat{border-left:4px solid var(--line);padding:8px 12px;margin-bottom:8px;background:var(--surface);border-radius:0 5px 5px 0}
+.beat.on{border-left-color:var(--accent);background:var(--accent-soft)}
+.beat b{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent)}
+.say td:first-child{color:var(--good);font-weight:600}.say td:last-child{color:var(--bad);text-decoration:line-through}
+.qa{border:1px solid var(--line);border-radius:5px;background:var(--surface);margin-bottom:8px}
+.qa summary{cursor:pointer;padding:10px 12px;font-weight:600;display:flex;gap:10px;align-items:baseline;flex-wrap:wrap}
+.qa .a{padding:0 12px 12px}
+.qa .a b{display:block;margin-bottom:4px}
+.bar{height:10px;background:var(--surface2);border-radius:5px;overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent)}
+.chk{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line)}
+.chk input{margin-top:4px;width:18px;height:18px;flex:none}
+.chk.done span{color:var(--muted);text-decoration:line-through}
+svg text{fill:var(--muted);font:11px var(--sans)}
+footer{color:var(--muted);font-size:12px;padding-block:20px;border-top:1px solid var(--line)}
+@media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<header class="top"><div class="wrap">
+  <div class="brand"><b>VELOGUARD</b><span>Demo console · RVCE · Climate Tech Student Launchpad · 5 Nov 2026</span></div>
+  <div class="hbtns"><button class="btn" id="themeBtn" type="button">Theme</button></div>
+</div></header>
+<div class="status"><div class="wrap">
+  <span><b>TABLETOP SIMULATION.</b> Road performance is unknown.</span>
+  <span>Simulated scenes only · no real road footage · no hardware connected to this page</span>
+</div></div>
+<nav class="tabs"><div class="wrap" role="tablist" id="tabs"></div></nav>
+
+<main class="wrap">
+
+<!-- 1 PROBLEM -->
+<section class="panel" id="p-problem">
+  <h1>One entrance, one decision</h1>
+  <p class="lead">A campus or estate manager hears that vehicles enter a one-way lane in reverse. Should they inspect the sign, post a marshal at a particular time, or leave the arrangement alone? VeloGuard produces a reviewed report that helps make that decision.</p>
+  <div class="pipe" aria-label="Pipeline">
+    <div><b>Fixed camera</b>or authorised file</div><i>→</i>
+    <div><b>Calibrated ROI</b>arrow + lane box</div><i>→</i>
+    <div><b>Background model</b>moving pixels</div><i>→</i>
+    <div><b>Blobs → tracks</b>linked centres</div><i>→</i>
+    <div><b>Cosine check</b>history + displacement</div><i>→</i>
+    <div><b>Candidate</b>event ID, clip, snapshot</div><i>→</i>
+    <div><b>Human review</b>accept / reject</div><i>→</i>
+    <div><b>Manager report</b>counts + minutes observed</div>
+  </div>
+  <div class="grid g3">
+    <div class="card"><h3>The proposed site</h3><p>Pattanagere / Mysore Road service lane is a candidate. Site control, posted direction, hours, exceptions, visibility and access are <b>UNVERIFIED</b>. A trajectory cannot establish a rider's motive.</p></div>
+    <div class="card"><h3>What the manager receives</h3><p>A security supervisor reviews candidate clips for one defined entrance. A periodic report lists unique reviewed events, minutes observed per time bin, downtime, uncertainties and a proposed decision. It is compared with existing CCTV review, staff observation and a simpler signage change.</p></div>
+    <div class="card"><h3>What has been tested</h3><p>Synthetic desk scenes only. A recording played later is a replay. Real road recording needs independent scoring before any road number is quoted. Until then: <b>"Road performance is unknown."</b></p></div>
+  </div>
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card flat"><h3>Limits of the product</h3><p>No trained vehicle classifier. No plate recognition. No driver identification. No roadside signalling. No police integration. No fines. Buyer, price, purchase authority, retention and field performance are unvalidated. Mobility impact is unmeasured.</p></div>
+    <div class="card flat"><h3>How to read this console</h3>
+      <p><span class="chip acc">Live</span> runs in this browser on a simulated desk lane. <span class="chip warn">Synthetic example</span> uses invented numbers from the P2 evidence pack. <span class="chip">Pending</span> means no real observation exists yet and the field stays blank rather than becoming a number.</p></div>
+  </div>
+  <p style="margin-top:14px"><button class="btn pri" type="button" data-go="demo">Open the live desk demo →</button></p>
+</section>
+
+<!-- 2 DEMO -->
+<section class="panel" id="p-demo">
+  <div class="row" style="justify-content:space-between;margin-bottom:10px">
+    <div><h1 style="font-size:22px;margin:0">Live desk demo</h1><span class="muted small">Source: <b>simulated desk lane</b> (generated in this browser) · Camera, ESP32 and OpenCV are not used here. Python reference script: <span class="mono">veloguard_tabletop.py</span></span></div>
+    <div class="row"><button class="btn" id="btnRun" type="button">Pause</button><button class="btn" id="btnReset" type="button">Reset run</button></div>
+  </div>
+  <div class="demo">
+    <div>
+      <div class="stage">
+        <div class="banner">Tabletop simulation</div>
+        <canvas id="view" width="640" height="360" aria-label="Simulated desk lane with arrow, lane box and tracks"></canvas>
+      </div>
+      <div class="row small muted" style="margin:6px 0">
+        <button class="btn" id="calArrow" type="button">Calibrate arrow (click 2 points)</button>
+        <button class="btn" id="calBox" type="button">Draw lane box (drag)</button>
+        <button class="btn" id="flipArrow" type="button">Reverse arrow</button>
+        <button class="btn" id="calReset" type="button">Default calibration</button>
+        <span id="calMsg"></span>
+      </div>
+      <div class="card" style="margin-top:8px">
+        <h3>Send an object through the desk lane</h3>
+        <div class="sc" id="scBtns"></div>
+        <div class="row" style="margin-top:10px">
+          <button class="btn pri" id="btnSeq" type="button">▶ Run presenter sequence (about 55 s)</button>
+          <button class="btn" id="btnDown" type="button">Mark downtime start</button>
+          <label style="flex-direction:row;align-items:center;gap:6px"><input type="checkbox" id="optShadow" checked> Suppress shadows</label>
+          <label style="flex-direction:row;align-items:center;gap:6px">Speed <select id="optSpeed" style="width:auto"><option>1</option><option>2</option></select>×</label>
+        </div>
+        <p class="small muted" style="margin:8px 0 0" id="scNote">Warm-up: the background model learns the empty lane first. That time is excluded from scoring.</p>
+      </div>
+    </div>
+    <div>
+      <div class="state" id="stateBox"><span id="stateTxt">Learning background…</span><span class="led" id="led"><i></i>Desk LED (simulated)</span></div>
+      <div class="card" style="margin-bottom:12px"><h3>Foreground mask (what the detector sees)</h3>
+        <canvas id="mask" width="160" height="90"></canvas>
+        <p class="small muted" style="margin:6px 0 0">White = changed pixels inside the lane box. Connected white patches become blobs; tiny ones are dropped by the area threshold.</p></div>
+      <div class="card" style="margin-bottom:12px"><h3>Direction check on the latest track</h3>
+        <div class="readout" id="readout">No track yet.</div>
+        <p class="small muted" style="margin:6px 0 0">cosine = (d·v) / (|d| |v|). ≤ −0.5 opposite · ≥ +0.5 aligned · between: undecided. Thresholds are built in, as in the handbook.</p></div>
+      <div class="card"><h3>Settings (frozen per run)</h3>
+        <div class="settings">
+          <label>min-area (px)<input type="number" id="sArea" value="600" min="50" step="50"></label>
+          <label>min-len (frames)<input type="number" id="sLen" value="8" min="2"></label>
+          <label>min-disp (px)<input type="number" id="sDisp" value="80" min="0" step="10"></label>
+          <label>pre (s)<input type="number" id="sPre" value="2" min="0" step="0.5"></label>
+          <label>post (s)<input type="number" id="sPost" value="2" min="0.5" step="0.5"></label>
+          <label>bucket (s)<select id="sBucket"><option>15</option><option selected>30</option><option>60</option></select></label>
+        </div>
+        <p class="small muted" style="margin:8px 0 0">Raising min-area suppresses noise but can miss distant vehicles. These are defaults to be verified against the team's own script help.</p></div>
+    </div>
+  </div>
+
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card"><h3>Review queue</h3>
+      <p class="small muted">Each candidate links one event ID to a snapshot, a saved clip and a row in <span class="mono">events.csv</span>. Press <b>a</b> to accept or <b>r</b> to reject the selected event. A reviewer decision is not proof the event was real.</p>
+      <div id="evList"><p class="muted small">No candidates yet. Send the <b>Reverse pass</b>.</p></div>
+    </div>
+    <div class="card"><h3>Events per bin, with minutes actually observed</h3>
+      <div id="chart"></div>
+      <p class="small muted" id="chartNote"></p>
+    </div>
+  </div>
+  <div class="card" style="margin-top:16px"><h3>events.csv (this run)</h3><div class="tw"><table class="mono" id="csv"></table></div></div>
+</section>
+
+<!-- 3 EVIDENCE -->
+<section class="panel" id="p-evidence">
+  <h1>Evidence: how we score the detector</h1>
+  <p class="lead">Mark every real crossing in the untouched original before looking at any flag. One matched pair is a TP. An unmatched flag, including a second flag on the same passage, is an FP. An unmatched real crossing is an FN.</p>
+  <div class="grid g2">
+    <div class="card"><h3>Live score for the desk run you just did</h3>
+      <div id="liveScore"></div>
+      <p class="small muted">Here the truth list is the scripted log of what the operator sent through the lane. It is not an independent blind count, so this is a desk row only. Never pool it with road rows.</p></div>
+    <div class="card"><h3>Score sheet · rows are never pooled</h3>
+      <div class="tw"><table class="sheet"><thead><tr><th>Source</th><th class="n">Min</th><th class="n">Real</th><th class="n">Flags</th><th class="n">TP</th><th class="n">FN</th><th class="n">FP</th></tr></thead>
+      <tbody id="sheetBody"></tbody></table></div>
+      <p class="small muted">Authorised held-out road: <b>not collected</b>. If asked: "This is a tabletop simulation. Road performance is unknown."</p></div>
+  </div>
+  <div class="card" style="margin-top:16px"><h3>Synthetic example from the P2 evidence pack <span class="chip warn">invented numbers</span></h3>
+    <div class="grid g2">
+      <div><p class="small">Run EXAMPLE-SYNTH-01 · scored 60–660 s minus 60 s camera bump (520–580 s) = <b>9.00 min observed</b>.</p>
+        <div class="tw"><table><thead><tr><th>Flag</th><th>t (s)</th><th>Outcome</th><th>Why</th></tr></thead><tbody>
+        <tr><td>E1</td><td>104</td><td><span class="chip good">TP</span></td><td>matches V1</td></tr>
+        <tr><td>E2</td><td>106</td><td><span class="chip bad">FP</span></td><td>duplicate of E1</td></tr>
+        <tr><td>E3</td><td>203</td><td><span class="chip good">TP</span></td><td>matches V2</td></tr>
+        <tr><td>E4</td><td>250</td><td><span class="chip bad">FP</span></td><td>shadow</td></tr>
+        <tr><td>E5</td><td>450</td><td><span class="chip">unscorable</span></td><td>clip truncated</td></tr>
+        <tr><td>E6</td><td>30</td><td><span class="chip">excluded</span></td><td>before scored start</td></tr></tbody></table></div></div>
+      <div><p class="small">Real crossings in the scored interval: V1, V2, V3, V6 = 4. Missed: V3 and V6 → <b>FN = 2</b>. Check: real = TP + FN = 2 + 2 = 4 ✓ · flags = TP + FP = 2 + 2 = 4 ✓.</p>
+        <p class="big">Precision 0.50 · Recall 0.50</p>
+        <p class="small muted">Second run, EXAMPLE-SYNTH-02: 5.00 min, zero real crossings, 1 false alarm → precision 0.000, <b>recall undefined</b>. Zero real events means we report minutes and false alarms, never a recall.</p>
+        <p class="small muted">Produced by <span class="mono">score_tool.py</span> in the P2 pack. The numbers demonstrate the tool and are not results.</p></div>
+    </div>
+  </div>
+  <div class="grid g3" style="margin-top:16px">
+    <div class="card"><h3>Blind-label protocol</h3><p class="small">Preserve an authorised continuous original. Mark a development segment; reserve the rest untouched. Label before seeing flags. A second reviewer checks ambiguous cases. Freeze labels, then reveal flags. If retuned after seeing test errors, that interval becomes development footage.</p></div>
+    <div class="card"><h3>Why the detector can be wrong</h3><p class="small">Shadow, pedestrian or reflection · split blobs and ID switches · stopped vehicles and camera jitter · bends and authorised diversions · rain, darkness, exposure. Use the scenario buttons in the demo to reproduce several of these.</p></div>
+    <div class="card"><h3>Worst failure to show</h3><p class="small">The <b>Split vehicle</b> scenario: one object becomes two patches and two flags for one passage. First flag is TP, second is FP. The pedestrian and glare scenarios are further false positives. State whether a fix was tested on development footage.</p></div>
+  </div>
+</section>
+
+<!-- 4 MOBILITY -->
+<section class="panel" id="p-mobility">
+  <h1>Mobility effect: timing against matched controls</h1>
+  <p class="lead">Delay is <b>unmeasured</b> on the road. This calculator shows the method on invented synthetic numbers. The result is an association under observed conditions, not crash prevention, fuel or carbon saving.</p>
+  <div class="grid g2">
+    <div class="card"><h3>Inputs <span class="chip warn">synthetic example</span></h3>
+      <label>Matched control transit times, seconds (same site, class and queue state)<input type="text" id="dCtl" value="10, 12, 11"></label>
+      <div style="height:8px"></div>
+      <label>Event D1: transit seconds of each affected lawful vehicle<input type="text" id="dE1" value="15, 9"></label>
+      <div style="height:8px"></div>
+      <label>Event D2: no affected vehicle (counts as zero, leave blank)<input type="text" id="dE2" value=""></label>
+      <div style="height:8px"></div>
+      <label>Event D3: obscured by a bus → unmeasurable, excluded<input type="text" id="dE3" value="" disabled placeholder="excluded"></label>
+    </div>
+    <div class="card"><h3>Result</h3><div id="dOut"></div>
+      <p class="small muted">Signed difference = observed transit seconds − matched median control seconds. Keep negative and positive values. Sum across distinct affected vehicles once per event. Unit: vehicle-seconds per event. Never select only the fastest controls.</p></div>
+  </div>
+  <div class="card flat" style="margin-top:16px"><h3>Interpretation for judges</h3><p>Density, signals and road geometry can explain a difference. Demonstrating avoided delay would need an approved intervention comparison with matched windows, traffic volume, exposure and confounding checked. Current result: <b>unmeasured</b>. This is a mobility project with an indirect climate hypothesis.</p></div>
+</section>
+
+<!-- 5 BUYER -->
+<section class="panel" id="p-buyer">
+  <h1>Buyer, permissions and the ₹50,000 request</h1>
+  <p class="lead">Proposed buyer: a campus facilities lead or estate manager with control and budget. Offer: a fixed monthly fee per monitored entrance covering one surveyed lane, agreed hours, bounded review, a report and support. Price and renewal are <b>UNVERIFIED</b>.</p>
+  <div class="grid g2">
+    <div class="card"><h3>Grant ceilings · no spending tonight</h3>
+      <div class="tw"><table><thead><tr><th class="n">Cap</th><th>Purpose and gate</th><th>Output</th></tr></thead><tbody id="capBody"></tbody></table></div>
+      <p class="small" style="margin-top:8px">Total of ceilings: <b class="num" id="capTotal"></b>. If no site is cleared, hold hardware funds. If quotes exceed a ceiling, seek grant-owner agreement to re-scope.</p></div>
+    <div class="card"><h3>Permission is not interest is not purchase</h3>
+      <div class="tw"><table><thead><tr><th>Contact</th><th>Access</th><th>Filming</th><th>Display</th><th>Interest</th><th>Trial</th><th>Purchase</th></tr></thead><tbody>
+      <tr><td>Site controller</td><td><span class="chip warn">pending</span></td><td><span class="chip warn">pending</span></td><td><span class="chip warn">pending</span></td><td><span class="chip warn">pending</span></td><td><span class="chip warn">pending</span></td><td><span class="chip warn">pending</span></td></tr>
+      <tr><td>Second site</td><td><span class="chip warn">pending</span></td><td><span class="chip warn">pending</span></td><td><span class="chip warn">pending</span></td><td><span class="chip warn">pending</span></td><td><span class="chip warn">pending</span></td><td><span class="chip warn">pending</span></td></tr>
+      <tr><td>Traffic liaison (procedures only)</td><td colspan="6" class="muted">n/a. Asked only how external reports are handled.</td></tr></tbody></table></div>
+      <p class="small muted" style="margin-top:8px">Status from the P4 permissions log. No written reply recorded. Interviews: 3 outreach rows, all <b>pending</b>. A pending call is not an interview.</p></div>
+  </div>
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card"><h3>Monthly contribution calculator</h3>
+      <p class="small muted">Contribution = fixed monthly fee − monthly delivery costs. Fields are blank because price and quotes are unvalidated.</p>
+      <div class="settings">
+        <label>Fee ₹ / month<input type="number" id="mFee" placeholder="unvalidated"></label>
+        <label>Equipment recovery ₹<input type="number" id="mEq" placeholder="quote pending"></label>
+        <label>Power, data, storage ₹<input type="number" id="mPw" placeholder="quote pending"></label>
+        <label>Support, travel, maint. ₹<input type="number" id="mSup" placeholder="unmeasured"></label>
+        <label>Candidates / month<input type="number" id="mCand" placeholder="unmeasured"></label>
+        <label>Mean minutes / review<input type="number" id="mMin" placeholder="unmeasured"></label>
+        <label>Reviewer ₹ / hour<input type="number" id="mRate" placeholder="unmeasured"></label>
+      </div>
+      <p class="big" id="mOut" style="margin-top:10px">Undefined</p><p class="small muted" id="mNote">Review minutes include rejected flags. Too much review can consume the whole fee.</p></div>
+    <div class="card"><h3>Cost sheet · pending quotes</h3>
+      <div class="tw"><table><thead><tr><th>Item</th><th>Status</th></tr></thead><tbody>
+      <tr><td>Camera, low light, compute, media (2 like-for-like quotes)</td><td><span class="chip warn">Quote pending</span></td></tr>
+      <tr><td>Mount, enclosure, power, backup, install</td><td><span class="chip warn">Quote pending</span></td></tr>
+      <tr><td>Network, storage, service, replacement</td><td><span class="chip warn">Quote pending</span></td></tr>
+      <tr><td>Bench indicator and safety review</td><td><span class="chip warn">Pending</span></td></tr>
+      <tr><td>Review hours × rate, power, support, survey, travel</td><td><span class="chip">Unmeasured</span></td></tr></tbody></table></div>
+      <p class="small muted" style="margin-top:8px">Say "Budget ceilings pending quotes." Never "This is the hardware price."</p></div>
+  </div>
+  <div class="card" style="margin-top:16px"><h3>Eight weeks after judging</h3><div class="tw"><table><thead><tr><th>Wk</th><th>Work</th><th>Evidence or stop condition</th></tr></thead><tbody>
+    <tr><td>1</td><td>Identify site controller, budget owner, lane rules, safe position, access, retention, display scope.</td><td>Written scope. Without clearance, defer capture.</td></tr>
+    <tr><td>2</td><td>Passive baseline with existing equipment. Two comparable quotes. Ask the buyer which decision matters.</td><td>Calibration, exposure log, criteria frozen before results.</td></tr>
+    <tr><td>3</td><td>Permitted separate sessions: day, night, rain, queues, turns, no-event periods.</td><td>Inventory by condition. Missing conditions marked untested.</td></tr>
+    <tr><td>4</td><td>Two reviewers label independently and reconcile ambiguity. Split by session, never adjacent frames.</td><td>Frozen manifests, truth IDs, documented match rule.</td></tr>
+    <tr><td>5</td><td>If licences allow, compare a trained detector + tracker with the existing rule on identical held-out events.</td><td>Counts by condition, latency, review burden.</td></tr>
+    <tr><td>6</td><td>Deliver a passive monthly-style report. Ask which action follows. Compare observed delay using controls.</td><td>Action log, rate per observed hour, downtime, exclusions.</td></tr>
+    <tr><td>7</td><td>Present a scoped price using actual costs. Ask who signs and what prevents renewal.</td><td>Written decision or refusal. Road signalling stays off.</td></tr>
+    <tr><td>8</td><td>Publish anonymised methods, denominators, false alarms/hour, latency, untested conditions.</td><td>Proceed only with continuing authorisation and a buyer next step. Otherwise redesign or stop.</td></tr></tbody></table></div>
+    <p class="small muted" style="margin-top:8px">The team can commit to performing and documenting these tests, including a refusal or failed benchmark. Permission, accuracy and purchase are outcomes to seek.</p></div>
+</section>
+
+<!-- 6 PRESENTER -->
+<section class="panel" id="p-present">
+  <h1>Presenter mode</h1>
+  <p class="lead">Default evidence line: <b>"This is a tabletop simulation. Road performance is unknown."</b> Operator cue: only describe a screen or LED response that actually happened. Leave space for both passes.</p>
+  <div class="grid g2">
+    <div class="card"><h3>3-minute run</h3>
+      <div class="row" style="justify-content:space-between"><div class="timer" id="tmr">3:00</div>
+        <div class="row"><button class="btn pri" id="tStart" type="button">Start</button><button class="btn" id="tReset" type="button">Reset</button></div></div>
+      <div style="margin-top:12px" id="beats"></div></div>
+    <div class="grid" style="align-content:start">
+      <div class="card"><h3>30 seconds · P4</h3><p class="small">"If you managed this entrance, when would you send someone to check the sign or post a marshal? VeloGuard compares movement with the marked direction and gives a reviewer a short clip. This is a tabletop simulation. Road performance is unknown. We ask for ₹50,000 to test one permitted entrance, measure what the camera misses and find out whether the manager would act on the report."</p></div>
+      <div class="card"><h3>Say / do not say</h3><div class="tw"><table class="say"><tbody id="sayBody"></tbody></table></div></div>
+    </div>
+  </div>
+  <div class="card" style="margin-top:16px"><h3>If the live demonstration fails</h3>
+    <p class="small">One restart attempt, at most ten seconds. LED alone fails → say it is offline and continue with the screen. Camera fails → "The live camera has failed. This is a recording of our earlier tabletop run." Label the replay. Playback fails → show the saved CSV row and still. Both missing → show the labelled schematic, say the demo did not run, and walk through the expected flow. Never toggle the LED manually and call it automatic detection.</p>
+    <p class="small"><b>Last line for an unscored site:</b> "This is a tabletop simulation. Road performance is unknown. The grant would let us test a permitted entrance against independent counts and ask its manager for a decision."</p></div>
+</section>
+
+<!-- 7 QA -->
+<section class="panel" id="p-qa">
+  <h1>Judge Q&amp;A rehearsal</h1>
+  <p class="lead">Each bold opening sentence is the line to say first. Owner shown per question.</p>
+  <div class="row" style="margin-bottom:12px"><input type="text" id="qaSearch" placeholder="Search questions, e.g. police, rain, DPDP, price" style="max-width:420px">
+    <select id="qaOwner" style="width:auto"><option value="">All owners</option><option>P1</option><option>P2</option><option>P3</option><option>P4</option></select></div>
+  <div id="qaList"></div>
+</section>
+
+<!-- 8 CHECKLIST -->
+<section class="panel" id="p-check">
+  <h1>Final card before you face the judges</h1>
+  <div class="grid g2">
+    <div class="card"><h3>Checklist</h3><div id="chkList"></div><p class="small muted" style="margin-top:8px">Ticks are kept in this browser only.</p></div>
+    <div class="grid" style="align-content:start">
+      <div class="card"><h3>Four owners</h3>
+        <p class="small"><b>P1 Detection.</b> Frozen run, settings.json, worst failure. Speaks 0:30–1:05. Q1, 2, 6, 7, 8.</p>
+        <p class="small"><b>P2 Evidence.</b> Blind labels, TP/FP/FN, observed bins. Speaks 1:30–2:05. Q3–5, 18, 19, 28.</p>
+        <p class="small"><b>P3 Hardware.</b> Bench checks, camera, LED, quotes. Speaks 1:05–1:30. Q11, 24.</p>
+        <p class="small"><b>P4 Strategy.</b> Permissions, interviews, pitch. Speaks 0:00–0:30 and 2:05–3:00. Q9–10, 12–17, 20–23, 25–27, 29–30.</p></div>
+      <div class="card"><h3>Data handling</h3><p class="small">Original footage stays local, restricted to named reviewers, cloud sync off, access and deletion logged. No raw footage in group chats or on the projector. Show aggregates, anonymous sketches or separately cleared redacted material. The team issues no fines and transfers no footage during this demo.</p></div>
+    </div>
+  </div>
+</section>
+</main>
+<footer><div class="wrap">VeloGuard · RVCE first-year team · Built from the Team Handbook and the P1–P4 packages. Every statistic on this page is either computed live from the simulation, labelled synthetic, or shown as pending. Programme behaviour on real hardware and roads is UNVERIFIED until the named owners test it.</div></footer>
+
+<script>
+"use strict";
+/* ---------- tabs ---------- */
+const TABS=[["problem","The problem"],["demo","Live desk demo"],["evidence","Evidence"],["mobility","Mobility"],["buyer","Buyer & funds"],["present","Presenter"],["qa","Judge Q&A"],["check","Final card"]];
+const tabsEl=document.getElementById("tabs");
+function showTab(id){
+  if(!TABS.some(t=>t[0]===id))id="problem";
+  document.querySelectorAll("section.panel").forEach(s=>s.classList.toggle("on",s.id==="p-"+id));
+  tabsEl.querySelectorAll("button").forEach(b=>b.setAttribute("aria-selected",b.dataset.t===id));
+  try{history.replaceState(null,"","#"+id)}catch(e){}
+  if(id==="evidence")renderScore();
+  window.scrollTo(0,0);
+}
+TABS.forEach(([id,l])=>{const b=document.createElement("button");b.type="button";b.dataset.t=id;b.role="tab";b.textContent=l;b.onclick=()=>showTab(id);tabsEl.appendChild(b)});
+document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>showTab(b.dataset.go));
+addEventListener("hashchange",()=>showTab(location.hash.slice(1)));
+document.getElementById("themeBtn").onclick=()=>{const r=document.documentElement;const d=r.dataset.theme==="dark"||(!r.dataset.theme&&matchMedia("(prefers-color-scheme: dark)").matches);r.dataset.theme=d?"light":"dark"};
+
+/* ---------- simulation ---------- */
+const W=640,H=360,SW=160,SH=90,SC=4,DT=0.05,WARM=2.0;
+const view=document.getElementById("view"),vctx=view.getContext("2d");
+const scene=document.createElement("canvas");scene.width=W;scene.height=H;const sctx=scene.getContext("2d");
+const small=document.createElement("canvas");small.width=SW;small.height=SH;const smctx=small.getContext("2d",{willReadFrequently:true});
+const maskC=document.getElementById("mask"),mctx=maskC.getContext("2d");
+const clipC=document.createElement("canvas");clipC.width=240;clipC.height=135;const cctx=clipC.getContext("2d");
+const LANE_Y0=120,LANE_Y1=240;
+// fixed lane texture
+const tex=new Uint8Array(W*H);for(let i=0;i<tex.length;i++)tex[i]=Math.random()*10;
+const texC=document.createElement("canvas");texC.width=W;texC.height=H;
+(function(){const c=texC.getContext("2d");const d=c.createImageData(W,H);for(let i=0;i<W*H;i++){const bg=(i/W|0)>=LANE_Y0&&(i/W|0)<LANE_Y1?104:60;const v=bg+tex[i]-5;d.data[i*4]=v;d.data[i*4+1]=v+2;d.data[i*4+2]=v+4;d.data[i*4+3]=255}c.putImageData(d,0,0);
+ c.strokeStyle="#c9c9c0";c.lineWidth=2;c.setLineDash([22,18]);c.beginPath();c.moveTo(0,180);c.lineTo(W,180);c.stroke();c.setLineDash([]);
+ c.strokeStyle="#d8d8d0";c.lineWidth=3;c.beginPath();c.moveTo(0,LANE_Y0);c.lineTo(W,LANE_Y0);c.moveTo(0,LANE_Y1);c.lineTo(W,LANE_Y1);c.stroke()})();
+
+const DEF={arrow:[60,150,580,150],roi:[40,125,560,110]};
+let S; // state
+function newState(){return{t:0,frame:0,running:true,objs:[],truth:[],tracks:[],nextTid:1,events:[],evN:0,ring:[],downtime:[],downOpen:null,
+ mean:null,led:0,state:"Learning background…",stateCls:"",bumpUntil:0,bumpDx:0,selEv:null,lastTrack:null,pending:[],seq:[]}}
+let cfg={arrow:DEF.arrow.slice(),roi:DEF.roi.slice()};
+S=newState();
+
+const SCEN={
+ legal:{label:"Legal pass (with arrow)",truth:"legal"},
+ reverse:{label:"Reverse pass (against arrow)",truth:"cross"},
+ sideways:{label:"Sideways crossing",truth:"none"},
+ shadow:{label:"Shadow moving against",truth:"none"},
+ glare:{label:"Glare / reflection",truth:"none"},
+ pedestrian:{label:"Pedestrian walking against",truth:"none"},
+ split:{label:"Split vehicle (worst failure)",truth:"cross"},
+ bump:{label:"Camera bump (0.6 s)",truth:"none"}
+};
+const scBtns=document.getElementById("scBtns");
+Object.entries(SCEN).forEach(([k,v])=>{const b=document.createElement("button");b.type="button";b.className="btn";b.textContent=v.label;b.dataset.k=k;b.onclick=()=>spawn(k);scBtns.appendChild(b)});
+
+function spawn(k){
+  if(S.t<WARM){note("Wait for warm-up to finish (background learning).");return}
+  const y=180,t=S.t;let o,dur;
+  const spd=170;
+  if(k==="legal"){o={k,x0:-60,x1:W+60,y,w:76,h:36};}
+  else if(k==="reverse"){o={k,x0:W+60,x1:-60,y,w:76,h:36};}
+  else if(k==="sideways"){o={k,x0:320,x1:320,y0:90,y1:270,w:40,h:76,vert:true};}
+  else if(k==="shadow"){o={k,x0:W+60,x1:-60,y,w:90,h:44};}
+  else if(k==="glare"){o={k,x0:W+60,x1:-60,y:170,w:70,h:40};}
+  else if(k==="pedestrian"){o={k,x0:W+30,x1:-30,y:200,w:22,h:40};}
+  else if(k==="split"){o={k,x0:W+90,x1:-90,y,w:76,h:36,split:true};}
+  else if(k==="bump"){S.bumpUntil=t+0.6;S.bumpDx=9;note("Camera bumped at "+t.toFixed(1)+" s. Mark downtime if you want it excluded from observed minutes.");return}
+  const dist=o.vert?Math.abs(o.y1-o.y0):Math.abs(o.x1-o.x0);
+  const sp=k==="pedestrian"?95:(k==="glare"?210:spd);
+  o.t0=t;o.dur=dist/sp;
+  S.objs.push(o);
+  const tr=SCEN[k].truth;
+  S.truth.push({id:"T"+(S.truth.length+1),kind:k,truth:tr,t0:t,t1:t+o.dur+0.4,matched:null});
+  note("Sent: "+SCEN[k].label+" at "+t.toFixed(1)+" s.");
+}
+function note(m){document.getElementById("scNote").textContent=m}
+
+function objPos(o,t){const p=Math.min(1,Math.max(0,(t-o.t0)/o.dur));return o.vert?{x:o.x0,y:o.y0+(o.y1-o.y0)*p,p}:{x:o.x0+(o.x1-o.x0)*p,y:o.y,p}}
+
+function renderScene(){
+  const c=sctx,t=S.t;
+  let dx=0,dy=0;if(t<S.bumpUntil){dx=S.bumpDx*(Math.sin(t*60)>0?1:-1);dy=3}
+  c.setTransform(1,0,0,1,0,0);c.drawImage(texC,dx,dy);
+  for(const o of S.objs){
+    const p=objPos(o,t);if(p.p>=1&&!o.vert&&false)continue;
+    if(t>o.t0+o.dur+0.05)continue;
+    c.save();c.translate(dx,dy);
+    if(o.k==="shadow"){c.fillStyle="rgba(0,0,0,0.30)";c.fillRect(p.x-o.w/2,p.y-o.h/2,o.w,o.h)}
+    else if(o.k==="glare"){const g=c.createRadialGradient(p.x,p.y,2,p.x,p.y,34);g.addColorStop(0,"rgba(255,255,240,0.75)");g.addColorStop(1,"rgba(255,255,240,0.35)");c.fillStyle=g;c.beginPath();c.ellipse(p.x,p.y,o.w/2,o.h/2,0,0,7);c.fill()}
+    else if(o.k==="pedestrian"){c.fillStyle="#f2d6a8";c.fillRect(p.x-o.w/2,p.y-o.h/2,o.w,o.h);c.fillStyle="#e24b3a";c.fillRect(p.x-o.w/2,p.y-o.h/2,o.w,14)}
+    else if(o.split){const gap=34,hw=(o.w-gap/2)/2;c.fillStyle="#ececec";c.fillRect(p.x-o.w/2-gap/2,p.y-o.h/2,o.w/2,o.h);c.fillRect(p.x+gap/2,p.y-o.h/2,o.w/2,o.h);c.fillStyle="#3a7bd5";c.fillRect(p.x-o.w/2-gap/2,p.y-6,o.w/2,10);c.fillRect(p.x+gap/2,p.y-6,o.w/2,10)}
+    else{c.fillStyle="#ececec";c.fillRect(p.x-o.w/2,p.y-o.h/2,o.w,o.h);c.fillStyle="#3a7bd5";c.fillRect(p.x-o.w/2,p.y-6,o.w,10);c.fillStyle="#222";c.fillRect(p.x-o.w/2+6,p.y-o.h/2-3,12,4);c.fillRect(p.x+o.w/2-18,p.y-o.h/2-3,12,4)}
+    c.restore();
+  }
+  S.objs=S.objs.filter(o=>t<=o.t0+o.dur+0.3);
+}
+
+let gray=new Float32Array(SW*SH);
+function detect(){
+  smctx.drawImage(scene,0,0,SW,SH);
+  const d=smctx.getImageData(0,0,SW,SH).data;
+  for(let i=0;i<SW*SH;i++)gray[i]=0.299*d[i*4]+0.587*d[i*4+1]+0.114*d[i*4+2];
+  if(!S.mean){S.mean=Float32Array.from(gray)}
+  const shadowOn=document.getElementById("optShadow").checked;
+  const [rx,ry,rw,rh]=cfg.roi;const x0=Math.max(0,rx/SC|0),y0=Math.max(0,ry/SC|0),x1=Math.min(SW,Math.ceil((rx+rw)/SC)),y1=Math.min(SH,Math.ceil((ry+rh)/SC));
+  let fg=new Uint8Array(SW*SH);
+  const learning=S.frame<20;
+  for(let y=0;y<SH;y++)for(let x=0;x<SW;x++){const i=y*SW+x,m=S.mean[i],g=gray[i];
+    const inR=x>=x0&&x<x1&&y>=y0&&y<y1;
+    if(!learning&&inR&&Math.abs(g-m)>22){const r=g/m;if(shadowOn&&g<m&&r>0.5&&r<0.93){fg[i]=127}else fg[i]=255}
+    const a=learning?0.2:0.004;S.mean[i]+=(g-m)*a}
+  // definite foreground only (255), dilate once
+  let mk=new Uint8Array(SW*SH);
+  for(let y=1;y<SH-1;y++)for(let x=1;x<SW-1;x++){const i=y*SW+x;if(fg[i]===255||(fg[i-1]===255||fg[i+1]===255||fg[i-SW]===255||fg[i+SW]===255))mk[i]=fg[i]===255||fg[i-1]===255||fg[i+1]===255||fg[i-SW]===255||fg[i+SW]===255?1:0}
+  // blobs
+  const lab=new Int16Array(SW*SH),blobs=[];const minA=+document.getElementById("sArea").value/(SC*SC);
+  for(let i=0;i<SW*SH;i++){if(!mk[i]||lab[i])continue;const id=blobs.length+1;const st=[i];lab[i]=id;let n=0,sx=0,sy=0,bx0=1e9,by0=1e9,bx1=-1,by1=-1;
+    while(st.length){const j=st.pop();const x=j%SW,y=(j/SW)|0;n++;sx+=x;sy+=y;if(x<bx0)bx0=x;if(x>bx1)bx1=x;if(y<by0)by0=y;if(y>by1)by1=y;
+      for(const k of [j-1,j+1,j-SW,j+SW]){if(k>=0&&k<SW*SH&&mk[k]&&!lab[k]&&Math.abs((k%SW)-x)<=1){lab[k]=id;st.push(k)}}}
+    blobs.push({n,cx:sx/n*SC+SC/2,cy:sy/n*SC+SC/2,box:[bx0*SC,by0*SC,(bx1-bx0+1)*SC,(by1-by0+1)*SC]})}
+  const kept=blobs.filter(b=>b.n>=minA);
+  return{mk,kept,dropped:blobs.length-kept.length};
+}
+
+function updateTracks(centres){
+  const T=S.tracks,pairs=[];
+  T.forEach((tr,ti)=>centres.forEach((c,ci)=>{const d=Math.hypot(tr.pts[tr.pts.length-1][0]-c.cx,tr.pts[tr.pts.length-1][1]-c.cy);if(d<=60)pairs.push([d,ti,ci])}));
+  pairs.sort((a,b)=>a[0]-b[0]);const ut=new Set(),uc=new Set();
+  for(const [d,ti,ci] of pairs){if(ut.has(ti)||uc.has(ci))continue;ut.add(ti);uc.add(ci);T[ti].pts.push([centres[ci].cx,centres[ci].cy,S.t]);T[ti].missed=0;T[ti].blob=centres[ci]}
+  T.forEach((tr,ti)=>{if(!ut.has(ti))tr.missed++});
+  centres.forEach((c,ci)=>{if(!uc.has(ci))T.push({id:S.nextTid++,pts:[[c.cx,c.cy,S.t]],missed:0,fired:false,state:"new",blob:c})});
+  S.tracks=T.filter(tr=>tr.missed<=6);
+}
+const cosine=(d,v)=>{const a=Math.hypot(d[0],d[1]),b=Math.hypot(v[0],v[1]);return a===0||b===0?null:(d[0]*v[0]+d[1]*v[1])/(a*b)};
+const classify=c=>c===null?"undefined":c<=-0.5?"opposite":c>=0.5?"aligned":"undecided";
+
+function checkTracks(){
+  const minLen=+document.getElementById("sLen").value,minDisp=+document.getElementById("sDisp").value;
+  const v=[cfg.arrow[2]-cfg.arrow[0],cfg.arrow[3]-cfg.arrow[1]];
+  for(const tr of S.tracks){
+    const a=tr.pts[0],b=tr.pts[tr.pts.length-1],d=[b[0]-a[0],b[1]-a[1]],mag=Math.hypot(d[0],d[1]);
+    const cs=cosine(d,v);
+    if(tr.pts.length>=minLen&&mag>=minDisp){tr.state=classify(cs);tr.cos=cs;tr.d=d;
+      if(tr.state==="opposite"&&!tr.fired&&S.t>=WARM){tr.fired=true;trigger(tr,cs,mag)}}
+    else{tr.state=tr.pts.length<minLen?"new":"short";tr.cos=cs;tr.d=d}
+    if(tr.pts.length>=minLen)S.lastTrack={id:tr.id,d,v,cos:cs,state:tr.state,len:tr.pts.length,mag,minDisp,minLen};
+  }
+}
+function trigger(tr,cs,mag){
+  S.evN++;const id="E"+String(S.evN).padStart(3,"0");const pre=+document.getElementById("sPre").value,post=+document.getElementById("sPost").value;
+  const now=new Date();const ist=now.toLocaleTimeString("en-GB",{timeZone:"Asia/Kolkata",hour12:false});
+  const preFrames=S.ring.filter(f=>f.t>=S.t-pre).map(f=>f.img);
+  const preComplete=S.t-pre>=WARM-0.001&&S.ring.length>0&&S.ring[0].t<=S.t-pre+0.2;
+  grab(); const snap=clipC.toDataURL("image/jpeg",0.7);
+  const ev={event_id:id,trigger_offset_s:+S.t.toFixed(2),trigger_clock_ist:ist,track_id:tr.id,cosine:+cs.toFixed(3),displacement_px:Math.round(mag),frames:preFrames,snapshot:snap,
+    pre_complete:preComplete,post_complete:false,postUntil:S.t+post,clip_ok:true,review:"pending"};
+  S.events.push(ev);S.pending.push(ev);S.selEv=id;
+  S.led=S.t+2;S.state="CANDIDATE against configured arrow ("+id+")";S.stateCls="cand";S.stateUntil=S.t+2.5;
+  renderEvents();
+}
+function grab(){cctx.drawImage(vdraw(),0,0,240,135)}
+function vdraw(){return scene} // clip frames show the scene (overlay-free); the live view adds overlays
+
+let timer=null,acc=0;
+function step(){
+  if(!S.running)return;
+  S.t+=DT;S.frame++;
+  if(S.downOpen!==null&&false){}
+  renderScene();
+  const r=detect();
+  // ring buffer & post frames, every 3rd frame
+  if(S.frame%3===0){cctx.drawImage(scene,0,0,240,135);const img=clipC.toDataURL("image/jpeg",0.5);S.ring.push({t:S.t,img});const lim=Math.max(+document.getElementById("sPre").value,0)+0.5;S.ring=S.ring.filter(f=>f.t>=S.t-lim);
+    for(const ev of S.pending)ev.frames.push(img)}
+  for(const ev of S.pending){if(S.t>=ev.postUntil){ev.post_complete=true}}
+  if(S.pending.some(e=>e.post_complete)){S.pending=S.pending.filter(e=>!e.post_complete);renderEvents();renderChart()}
+  if(S.t>=WARM){updateTracks(r.kept);checkTracks()}
+  if(S.stateUntil&&S.t>S.stateUntil){S.stateUntil=0}
+  if(S.seq.length){while(S.seq.length&&S.seq[0][0]<=S.t){const [,k]=S.seq.shift();spawn(k)}}
+  drawView(r);
+  if(S.frame%10===0){renderChart();renderCsv();}
+}
+function drawView(r){
+  const c=vctx;c.drawImage(scene,0,0);
+  const [rx,ry,rw,rh]=cfg.roi;c.lineWidth=2;c.strokeStyle="#ffc400";c.strokeRect(rx,ry,rw,rh);
+  const [ax,ay,bx,by]=cfg.arrow;c.strokeStyle="#38e07b";c.fillStyle="#38e07b";c.lineWidth=3;c.beginPath();c.moveTo(ax,ay);c.lineTo(bx,by);c.stroke();
+  const ang=Math.atan2(by-ay,bx-ax);c.beginPath();c.moveTo(bx,by);c.lineTo(bx-14*Math.cos(ang-.4),by-14*Math.sin(ang-.4));c.lineTo(bx-14*Math.cos(ang+.4),by-14*Math.sin(ang+.4));c.fill();
+  c.font="12px system-ui";c.fillStyle="#38e07b";c.fillText("permitted travel",ax+4,ay-8);
+  c.fillStyle="#ffc400";c.fillText("lane box (ROI)",rx+4,ry+rh-6);
+  for(const tr of S.tracks){c.strokeStyle=tr.state==="opposite"?"#ff5a4d":"#4aa8ff";c.lineWidth=1.5;c.beginPath();tr.pts.forEach((p,i)=>i?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]));c.stroke();
+    const l=tr.pts[tr.pts.length-1];c.fillStyle=c.strokeStyle;c.beginPath();c.arc(l[0],l[1],4,0,7);c.fill();c.fillText("T"+tr.id+" "+tr.state,l[0]+7,l[1]-7);
+    if(tr.blob&&tr.missed===0){const b=tr.blob.box;c.strokeStyle="rgba(255,255,255,.6)";c.lineWidth=1;c.strokeRect(b[0],b[1],b[2],b[3])}}
+  c.fillStyle="rgba(0,0,0,.6)";c.fillRect(0,H-22,W,22);c.fillStyle="#fff";c.font="12px ui-monospace,monospace";
+  c.fillText("t = "+S.t.toFixed(2)+" s   source: simulated desk lane   frame "+S.frame,8,H-7);
+  if(S.cal){c.fillStyle="#fff";c.fillText(S.cal.msg,8,18)}
+  if(S.dragBox){const b=S.dragBox;c.strokeStyle="#fff";c.setLineDash([5,4]);c.strokeRect(b[0],b[1],b[2],b[3]);c.setLineDash([])}
+  // mask
+  const id=mctx.createImageData(SW,SH);for(let i=0;i<SW*SH;i++){const v=r.mk[i]?255:0;id.data[i*4]=v;id.data[i*4+1]=v;id.data[i*4+2]=v;id.data[i*4+3]=255}mctx.putImageData(id,0,0);
+  // state
+  const sb=document.getElementById("stateBox"),st=document.getElementById("stateTxt");
+  let txt,cls;
+  if(S.t<WARM){txt="Learning background… (warm-up excluded from scoring)";cls=""}
+  else if(S.stateUntil&&S.t<S.stateUntil){txt=S.state;cls="cand"}
+  else if(S.tracks.some(t=>t.state==="aligned")){txt="Legal travel (aligned with arrow)";cls="ok"}
+  else if(S.tracks.length){txt="Tracking… "+S.tracks.map(t=>"T"+t.id+" "+t.state).join(", ");cls=""}
+  else{txt="Watching. No candidate.";cls=""}
+  st.textContent=txt;sb.className="state "+cls;
+  document.getElementById("led").classList.toggle("on",S.t<S.led);
+  // readout
+  const L=S.lastTrack,ro=document.getElementById("readout");
+  if(L){const f=n=>Math.round(n);ro.textContent="Track T"+L.id+" · "+L.len+" obs\nv (arrow)  = ("+f(L.v[0])+", "+f(L.v[1])+")\nd (last−first) = ("+f(L.d[0])+", "+f(L.d[1])+")  |d|="+f(Math.hypot(L.d[0],L.d[1]))+" px\ncosine = "+(L.cos===null?"undefined":L.cos.toFixed(3))+"  → "+L.state}
+}
+function resetRun(){S=newState();document.getElementById("btnRun").textContent="Pause";renderEvents();renderChart();renderCsv();renderScore();note("Run reset. Warm-up restarts: the background model learns the empty lane.")}
+document.getElementById("btnReset").onclick=resetRun;
+document.getElementById("btnRun").onclick=e=>{S.running=!S.running;e.target.textContent=S.running?"Pause":"Resume"};
+document.getElementById("btnDown").onclick=e=>{
+  if(S.downOpen===null){S.downOpen=S.t;e.target.textContent="Mark downtime end";note("Downtime started at "+S.t.toFixed(1)+" s. It will be removed from observed minutes.")}
+  else{S.downtime.push([S.downOpen,S.t]);S.downOpen=null;e.target.textContent="Mark downtime start";note("Downtime logged. Observed minutes now exclude it.");renderChart()}};
+document.getElementById("btnSeq").onclick=()=>{
+  if(S.t<WARM){note("Wait for warm-up first.");return}
+  const t=S.t;S.seq=[[t+0.1,"legal"],[t+6,"reverse"],[t+14,"sideways"],[t+20,"shadow"],[t+27,"split"],[t+36,"pedestrian"],[t+44,"glare"],[t+52,"reverse"]];
+  note("Presenter sequence started: legal, reverse, sideways, shadow, split vehicle, pedestrian, glare, reverse.")};
+["sBucket"].forEach(id=>document.getElementById(id).onchange=renderChart);
+document.getElementById("optSpeed").onchange=()=>{};
+function loop(){const sp=+document.getElementById("optSpeed").value;for(let i=0;i<sp;i++)step()}
+setInterval(loop,50);
+
+/* calibration */
+const calMsg=document.getElementById("calMsg");
+function toCanvas(e){const r=view.getBoundingClientRect();return[(e.clientX-r.left)*W/r.width,(e.clientY-r.top)*H/r.height]}
+let mode=null,pts=[],dragStart=null;
+document.getElementById("calArrow").onclick=()=>{mode="arrow";pts=[];S.cal={msg:"Click START of permitted travel"};calMsg.textContent="Click the start, then the end of permitted travel."};
+document.getElementById("calBox").onclick=()=>{mode="box";dragStart=null;S.cal={msg:"Drag a tight box on the straight lane"};calMsg.textContent="Drag a box around the straight section."};
+document.getElementById("flipArrow").onclick=()=>{const a=cfg.arrow;cfg.arrow=[a[2],a[3],a[0],a[1]];S.tracks=[];S.lastTrack=null;calMsg.textContent="Arrow reversed. Reversing the points reverses the interpretation: legal passes now flag."};
+document.getElementById("calReset").onclick=()=>{cfg={arrow:DEF.arrow.slice(),roi:DEF.roi.slice()};S.tracks=[];S.cal=null;mode=null;calMsg.textContent="Default calibration restored."};
+view.addEventListener("pointerdown",e=>{if(!mode)return;const p=toCanvas(e);
+  if(mode==="arrow"){pts.push(p);if(pts.length===1)S.cal={msg:"Click END of permitted travel (arrow tip)"};else{cfg.arrow=[pts[0][0],pts[0][1],pts[1][0],pts[1][1]].map(Math.round);S.tracks=[];S.lastTrack=null;S.cal=null;mode=null;calMsg.textContent="Arrow set. Repeat calibration after any move, crop, resize or mirror."}}
+  else if(mode==="box"){dragStart=p;S.dragBox=[p[0],p[1],0,0];view.setPointerCapture(e.pointerId)}});
+view.addEventListener("pointermove",e=>{if(mode==="box"&&dragStart){const p=toCanvas(e);S.dragBox=[Math.min(p[0],dragStart[0]),Math.min(p[1],dragStart[1]),Math.abs(p[0]-dragStart[0]),Math.abs(p[1]-dragStart[1])]}});
+view.addEventListener("pointerup",e=>{if(mode==="box"&&dragStart){const b=S.dragBox;S.dragBox=null;dragStart=null;mode=null;S.cal=null;if(b[2]>20&&b[3]>10){cfg.roi=b.map(Math.round);S.tracks=[];calMsg.textContent="Lane box set. A wider box admits footpath or turning traffic; a tight box can cut valid tracks."}else calMsg.textContent="No box drawn. Try again."}});
+
+/* review */
+function setReview(id,v){const ev=S.events.find(e=>e.event_id===id);if(!ev)return;ev.review=v;renderEvents();renderChart();renderCsv();renderScore()}
+addEventListener("keydown",e=>{if(/INPUT|SELECT|TEXTAREA/.test(document.activeElement.tagName))return;if(!document.getElementById("p-demo").classList.contains("on"))return;
+  if(e.key==="a"||e.key==="r")if(S.selEv)setReview(S.selEv,e.key==="a"?"accepted":"rejected")});
+const clipTimers={};
+function renderEvents(){
+  const box=document.getElementById("evList");
+  if(!S.events.length){box.innerHTML='<p class="muted small">No candidates yet. Send the <b>Reverse pass</b>.</p>';return}
+  box.innerHTML="";
+  S.events.slice().reverse().forEach(ev=>{
+    const d=document.createElement("div");d.className="ev"+(ev.event_id===S.selEv?" sel":"");
+    const rv=ev.review==="accepted"?'<span class="chip good">accepted</span>':ev.review==="rejected"?'<span class="chip bad">rejected</span>':'<span class="chip warn">pending review</span>';
+    d.innerHTML='<div><canvas width="240" height="135" data-ev="'+ev.event_id+'"></canvas></div><div><div class="row" style="justify-content:space-between"><b class="mono">'+ev.event_id+'</b>'+rv+'</div>'+
+     '<dl class="kv"><dt>trigger</dt><dd class="mono">'+ev.trigger_offset_s+' s · '+ev.trigger_clock_ist+' IST</dd><dt>track / cos</dt><dd class="mono">T'+ev.track_id+' · '+ev.cosine+'</dd><dt>displacement</dt><dd class="mono">'+ev.displacement_px+' px</dd>'+
+     '<dt>clip</dt><dd>'+ev.frames.length+' frames · pre '+(ev.pre_complete?"complete":"<b>truncated</b>")+' · post '+(ev.post_complete?"complete":"recording…")+'</dd></dl>'+
+     '<div class="row" style="margin-top:6px"><button class="btn good" data-a="accepted" type="button">Accept (a)</button><button class="btn bad" data-a="rejected" type="button">Reject (r)</button></div></div>';
+    d.onclick=()=>{S.selEv=ev.event_id;renderEvents()};
+    d.querySelectorAll("button").forEach(b=>b.onclick=x=>{x.stopPropagation();S.selEv=ev.event_id;setReview(ev.event_id,b.dataset.a)});
+    box.appendChild(d);
+    const cv=d.querySelector("canvas"),cx=cv.getContext("2d");const im=new Image();im.onload=()=>cx.drawImage(im,0,0);im.src=ev.snapshot;
+    let i=0;cv.onmouseenter=()=>{clearInterval(clipTimers[ev.event_id]);clipTimers[ev.event_id]=setInterval(()=>{if(!ev.frames.length)return;const f=new Image();f.onload=()=>cx.drawImage(f,0,0);f.src=ev.frames[i++%ev.frames.length]},150)};
+    cv.onmouseleave=()=>{clearInterval(clipTimers[ev.event_id]);im.onload()};
+    cv.title="Hover to replay the saved clip (simulated scene)";
+  });
+}
+function renderCsv(){
+  const t=document.getElementById("csv");
+  t.innerHTML="<thead><tr><th>event_id</th><th>trigger_offset_s</th><th>clock_ist</th><th>track</th><th>cosine</th><th>disp_px</th><th>clip_frames</th><th>pre</th><th>post</th><th>review</th></tr></thead><tbody>"+
+   (S.events.length?S.events.map(e=>"<tr><td>"+e.event_id+"</td><td>"+e.trigger_offset_s+"</td><td>"+e.trigger_clock_ist+"</td><td>"+e.track_id+"</td><td>"+e.cosine+"</td><td>"+e.displacement_px+"</td><td>"+e.frames.length+"</td><td>"+(e.pre_complete?"complete":"truncated")+"</td><td>"+(e.post_complete?"complete":"pending")+"</td><td>"+e.review+"</td></tr>").join(""):'<tr><td colspan="10" class="muted">no candidates</td></tr>')+"</tbody>";
+}
+function ov(a0,a1,b0,b1){return Math.max(0,Math.min(a1,b1)-Math.max(a0,b0))}
+function renderChart(){
+  const B=+document.getElementById("sBucket").value,s0=WARM,s1=Math.max(S.t,WARM+0.01);
+  const downs=S.downtime.slice();if(S.downOpen!==null)downs.push([S.downOpen,S.t]);
+  const first=Math.floor(s0/B),last=Math.floor(s1/B);const bins=[];
+  for(let k=first;k<=last;k++){const b0=k*B,b1=b0+B;const obs=ov(b0,b1,s0,s1);const dn=downs.reduce((a,d)=>a+ov(b0,b1,d[0],d[1]),0);
+    const ins=S.events.filter(e=>e.trigger_offset_s>=Math.max(b0,s0)&&e.trigger_offset_s<b1);
+    bins.push({b0,b1,obsS:Math.max(0,obs-dn),downS:dn,acc:ins.filter(e=>e.review==="accepted").length,rej:ins.filter(e=>e.review==="rejected").length,pen:ins.filter(e=>e.review==="pending").length})}
+  const anyRev=S.events.some(e=>e.review!=="pending");
+  const maxV=Math.max(2,...bins.map(b=>b.acc+b.rej+b.pen));
+  const w=520,h=230,pl=34,pr=8,pt=12,pb=58,bw=(w-pl-pr)/bins.length;
+  let s='<svg viewBox="0 0 '+w+' '+h+'" width="100%" role="img" aria-label="Events per bin with observed seconds"><defs><pattern id="hat" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="3" height="6" fill="var(--line)"/></pattern></defs>';
+  for(let v=0;v<=maxV;v+=Math.ceil(maxV/4)){const y=pt+(h-pt-pb)*(1-v/maxV);s+='<line x1="'+pl+'" x2="'+(w-pr)+'" y1="'+y+'" y2="'+y+'" stroke="var(--line)"/><text x="'+(pl-6)+'" y="'+(y+4)+'" text-anchor="end">'+v+'</text>'}
+  bins.forEach((b,i)=>{const x=pl+i*bw+bw*0.18,bwid=bw*0.64,ph=h-pt-pb;let y=pt+ph;
+    const seg=(n,fill)=>{if(!n)return;const hh=ph*n/maxV;y-=hh;s+='<rect x="'+x+'" y="'+y+'" width="'+bwid+'" height="'+hh+'" fill="'+fill+'"/>'};
+    if(b.obsS<=0.01){s+='<rect x="'+x+'" y="'+pt+'" width="'+bwid+'" height="'+ph+'" fill="url(#hat)"/><text x="'+(x+bwid/2)+'" y="'+(pt+ph/2)+'" text-anchor="middle">not observed</text>'}
+    else{seg(b.acc,"var(--accent)");seg(b.rej,"var(--muted)");seg(b.pen,"var(--warn)")}
+    const cx=x+bwid/2;s+='<text x="'+cx+'" y="'+(h-pb+14)+'" text-anchor="middle">'+Math.round(b.b0)+"–"+Math.round(b.b1)+' s</text><text x="'+cx+'" y="'+(h-pb+28)+'" text-anchor="middle">'+(b.obsS/60).toFixed(2)+' min</text>'+(b.downS>0?'<text x="'+cx+'" y="'+(h-pb+42)+'" text-anchor="middle">down '+(b.downS/60).toFixed(2)+'</text>':'')});
+  s+='<text x="'+pl+'" y="'+(h-4)+'">bin start–end (s) · observed minutes under each bar</text></svg>';
+  s+='<div class="row small" style="gap:12px"><span><span class="chip acc">accepted</span></span><span><span class="chip">rejected</span></span><span><span class="chip warn">pending review</span></span></div>';
+  document.getElementById("chart").innerHTML=s;
+  document.getElementById("chartNote").textContent=(anyRev?"Bars stack accepted, rejected and still-pending candidates.":"UNREVIEWED candidates. Accept or reject to settle the count.")+" Bin width "+B+" s is a desk-scale test; ten minutes cannot establish a busiest hour. A fully observed bin with no accepted events has zero accepted events. A bin with no observed minutes is missing, not zero.";
+}
+
+/* score */
+const sheet={desk:null};
+function score(){
+  const crossings=S.truth.filter(t=>t.truth==="cross");const flags=S.events.slice().sort((a,b)=>a.trigger_offset_s-b.trigger_offset_s);
+  const used=new Set();let TP=0;
+  for(const c of crossings){const f=flags.find(f=>!used.has(f.event_id)&&f.trigger_offset_s>=c.t0&&f.trigger_offset_s<=c.t1+0.5);if(f){used.add(f.event_id);TP++;c.matched=f.event_id}else c.matched=null}
+  const FN=crossings.length-TP,FP=flags.length-TP;
+  const downs=S.downtime.reduce((a,d)=>a+(d[1]-d[0]),0);const mins=Math.max(0,S.t-WARM-downs)/60;
+  return{TP,FN,FP,real:crossings.length,flags:flags.length,mins,crossings,flagsArr:flags,used}
+}
+function renderScore(){
+  const sc=score();const p=sc.TP+sc.FP===0?"undefined":(sc.TP/(sc.TP+sc.FP)).toFixed(3);const r=sc.TP+sc.FN===0?"undefined":(sc.TP/(sc.TP+sc.FN)).toFixed(3);
+  const ok1=sc.real===sc.TP+sc.FN,ok2=sc.flags===sc.TP+sc.FP;
+  document.getElementById("liveScore").innerHTML=
+   '<p class="small">Simulated desk · <b class="num">'+sc.mins.toFixed(2)+' min</b> observed (warm-up excluded)</p>'+
+   '<div class="grid g3" style="gap:8px"><div class="card flat"><div class="big">'+sc.TP+'</div>TP</div><div class="card flat"><div class="big">'+sc.FN+'</div>FN</div><div class="card flat"><div class="big">'+sc.FP+'</div>FP</div></div>'+
+   '<p style="margin-top:10px">Precision <b class="mono">'+p+'</b> · Recall <b class="mono">'+r+'</b></p>'+
+   '<p class="small muted">Real crossings sent '+sc.real+' = TP + FN '+(ok1?"✓":"✗")+' · flags raised '+sc.flags+' = TP + FP '+(ok2?"✓":"✗")+(sc.real===0?'<br>Zero real crossings: report minutes and false alarms. Recall is undefined.':'')+'</p>'+
+   (S.truth.length?'<div class="tw"><table><thead><tr><th>Sent</th><th>t0 (s)</th><th>Truth</th><th>Matched flag</th></tr></thead><tbody>'+S.truth.map(t=>'<tr><td>'+SCEN[t.kind].label+'</td><td class="num">'+t.t0.toFixed(1)+'</td><td>'+(t.truth==="cross"?"real crossing":t.truth==="legal"?"legal pass":"no event")+'</td><td>'+(t.truth==="cross"?(t.matched||'<span class="chip bad">missed (FN)</span>'):"—")+'</td></tr>').join("")+'</tbody></table></div>':'<p class="small muted">Run the demo first: send passes in the Live desk demo tab.</p>')+
+   (sc.flagsArr.filter(f=>!sc.used.has(f.event_id)).length?'<p class="small"><b>False positives:</b> '+sc.flagsArr.filter(f=>!sc.used.has(f.event_id)).map(f=>f.event_id+" @"+f.trigger_offset_s+"s").join(", ")+' (a duplicate for the same passage counts here)</p>':'');
+  document.getElementById("sheetBody").innerHTML=
+   '<tr><td>Simulated desk (this run, live)</td><td class="n">'+sc.mins.toFixed(2)+'</td><td class="n">'+sc.real+'</td><td class="n">'+sc.flags+'</td><td class="n">'+sc.TP+'</td><td class="n">'+sc.FN+'</td><td class="n">'+sc.FP+'</td></tr>'+
+   '<tr><td>Authorised held-out road</td><td class="n muted" colspan="6">not collected · [FILL]</td></tr>'+
+   '<tr><td>Independent second interval</td><td class="n muted" colspan="6">not collected · [FILL]</td></tr>'+
+   '<tr><td class="muted">Synthetic example SYNTH-01 (invented)</td><td class="n muted">9.00</td><td class="n muted">4</td><td class="n muted">4</td><td class="n muted">2</td><td class="n muted">2</td><td class="n muted">2</td></tr>';
+}
+setInterval(()=>{if(document.getElementById("p-evidence").classList.contains("on"))renderScore()},1000);
+
+/* mobility */
+function med(a){const s=a.slice().sort((x,y)=>x-y),m=s.length>>1;return s.length?(s.length%2?s[m]:(s[m-1]+s[m])/2):null}
+const nums=v=>v.split(",").map(x=>x.trim()).filter(x=>x!=="").map(Number).filter(x=>!isNaN(x));
+function renderDelay(){
+  const ctl=nums(document.getElementById("dCtl").value),m=med(ctl);const out=document.getElementById("dOut");
+  if(m===null){out.innerHTML='<p class="big">Unmeasured</p><p class="muted">Enter matched control times.</p>';return}
+  let html='<p class="small">Median control transit: <b class="mono">'+m+' s</b> from '+ctl.length+' controls</p><div class="tw"><table><thead><tr><th>Event</th><th>Affected</th><th class="n">Signed diff (s)</th><th class="n">Event total</th></tr></thead><tbody>';
+  const evs=[["D1","dE1"],["D2","dE2"]];const totals=[];
+  evs.forEach(([n,id])=>{const a=nums(document.getElementById(id).value);const diffs=a.map(x=>x-m);const tot=diffs.reduce((p,c)=>p+c,0);totals.push(tot);
+    html+='<tr><td>'+n+'</td><td>'+(a.length?a.map(x=>x+" s").join(", "):"none (zero)")+'</td><td class="n">'+(diffs.length?diffs.map(d=>(d>0?"+":"")+d).join(", "):"0")+'</td><td class="n">'+(tot>0?"+":"")+tot+' veh·s</td></tr>'});
+  html+='<tr><td>D3</td><td colspan="3" class="muted">obscured by a bus → unmeasurable, excluded</td></tr></tbody></table></div>';
+  const rng=Math.min(...totals),rg2=Math.max(...totals);
+  html+='<p class="small">Measurable events: 2 · range '+rng+' to '+rg2+' vehicle-seconds per event · controls: '+ctl.length+' · exclusions: 1. Real-road result: <b>unmeasured</b>.</p>';out.innerHTML=html}
+["dCtl","dE1","dE2"].forEach(id=>document.getElementById(id).oninput=renderDelay);renderDelay();
+
+/* buyer */
+const CAPS=[[20000,"Camera/edge compute after written site scope, comparable quotes and purchase authorisation","Costed bill of materials and receipts"],[8000,"Mount, power, enclosure after safe site and mounting review","Approved installation checklist"],[5000,"Bench sign and safety review after scope is agreed","Review or unspent balance"],[9000,"Permitted collection, independent labels and testing after collection approval","Held-out scores and workload log"],[8000,"Documented travel, permission administration, reporting and contingency against approved purpose","Receipts, offer and balance"]];
+document.getElementById("capBody").innerHTML=CAPS.map(c=>'<tr><td class="num"><b>₹'+c[0].toLocaleString("en-IN")+'</b></td><td>'+c[1]+'</td><td>'+c[2]+'</td></tr>').join("");
+document.getElementById("capTotal").textContent="₹"+CAPS.reduce((a,c)=>a+c[0],0).toLocaleString("en-IN");
+function renderM(){const g=id=>{const v=document.getElementById(id).value;return v===""?null:+v};
+  const fee=g("mFee"),eq=g("mEq"),pw=g("mPw"),su=g("mSup"),cand=g("mCand"),mn=g("mMin"),rate=g("mRate");
+  const out=document.getElementById("mOut"),note=document.getElementById("mNote");
+  if([fee,eq,pw,su,cand,mn,rate].some(x=>x===null)){out.textContent="Undefined";note.textContent="Missing inputs stay blank. Never read a blank as a number. Review minutes include rejected flags.";return}
+  const revMin=cand*mn,revCost=revMin/60*rate,contrib=fee-eq-pw-su-revCost;
+  out.textContent="₹"+Math.round(contrib).toLocaleString("en-IN")+" / month";note.textContent="Review minutes = "+revMin+" (all candidates × mean minutes) → ₹"+Math.round(revCost)+". Illustrative arithmetic only with the numbers you typed.";}
+["mFee","mEq","mPw","mSup","mCand","mMin","mRate"].forEach(id=>document.getElementById(id).oninput=renderM);
+
+/* presenter */
+const BEATS=[[0,30,"P4 · Strategy","Imagine you manage one entrance. Someone says vehicles come the wrong way every evening. Do you move a guard, repaint the sign, or check whether it actually happens at that hour? Our proposed site is the Pattanagere service lane. Its direction, hours, authority and permissions need checking. We want to give one manager enough evidence to make that decision.","Show: The problem tab"],
+[30,65,"P1 · Detection","We fix the camera, draw a box around a straight part of the lane and click an arrow along permitted travel. The software learns the background, finds moving patches and links their centres. It waits for enough movement before comparing the path with our arrow. A sideways path stays undecided. A shadow or pedestrian can produce a convincing track. We flag a candidate for a person to inspect.","Show: Live desk demo, calibration + mask"],
+[65,90,"P3 · Hardware","This is our tabletop simulation. Here is a pass along the arrow. [Pause.] Now we move the same object against it. [Point to the actual state.] The screen shows the state, and the optional desk LED represents the same trigger if connected. On real footage we observe silently. No rider receives a signal.","Do: Legal pass, then Reverse pass"],
+[90,125,"P2 · Evidence","[Speak the applicable evidence branch.] We check the detector by marking every passage in the uninterrupted original before viewing any alerts. Each flag can match only one vehicle crossing. An extra flag for the same crossing is a false alarm. Here is the score sheet. The report gives minutes observed beside each bin. A blank hour means we did not observe it.","Show: Evidence tab"],
+[125,155,"P4 · Buyer","The buyer we intend to test is the manager responsible for a campus or estate entrance. We would offer a fixed monthly fee for reviewed events and a report. [Give a permitted documented buyer response, or say the purchase decision is untested.] To investigate mobility impact, we will time legal vehicles through the same section under comparable conditions. We have no measured fuel or carbon saving.","Show: Buyer & funds, Mobility"],
+[155,180,"P4 · Close","We ask for ₹50,000 in stages. Written site scope comes first. Then we publish missed events, false alarms and review minutes. Finally we ask the budget owner for a decision on a costed trial. If the camera view is unsuitable, a sign works better or nobody uses the report, we will document that and hold the remaining funds.","Show: the five ceilings"]];
+const beatsEl=document.getElementById("beats");
+beatsEl.innerHTML=BEATS.map((b,i)=>'<div class="beat" id="beat'+i+'"><b>'+fmt(b[0])+"–"+fmt(b[1])+" · "+b[2]+'</b><div class="small">“'+b[3]+'”</div><div class="small muted">'+b[4]+'</div></div>').join("");
+function fmt(s){return Math.floor(s/60)+":"+String(s%60).padStart(2,"0")}
+let tI=null,tEl=0;
+function tick(){tEl++;const rem=Math.max(0,180-tEl);document.getElementById("tmr").textContent=fmt(rem);BEATS.forEach((b,i)=>document.getElementById("beat"+i).classList.toggle("on",tEl>=b[0]&&tEl<b[1]));if(rem===0){clearInterval(tI);tI=null;document.getElementById("tStart").textContent="Start"}}
+document.getElementById("tStart").onclick=e=>{if(tI){clearInterval(tI);tI=null;e.target.textContent="Resume"}else{tI=setInterval(tick,1000);e.target.textContent="Pause";tick()}};
+document.getElementById("tReset").onclick=()=>{clearInterval(tI);tI=null;tEl=0;document.getElementById("tmr").textContent="3:00";document.getElementById("tStart").textContent="Start";BEATS.forEach((b,i)=>document.getElementById("beat"+i).classList.remove("on"))};
+const SAY=[["Candidate against our configured arrow.","AI identified an offender."],["Desk indicator represents a proposed warning.","Our light safely stops riders."],["Here are the counts for this interval.","This is Bengaluru-wide accuracy."],["These bins include the minutes tested.","This is the worst hour of the day."],["Permission, interest and purchase are separate.","RVCE is our customer. Police approved us."],["Authorities decide how to handle any external report.","We issue fines. Police can identify this rider."],["Delay unmeasured, or observed seconds if timed.","We reduced crashes, fuel use or carbon."],["Budget ceilings pending quotes.","This is the hardware price."]];
+document.getElementById("sayBody").innerHTML=SAY.map(r=>"<tr><td>"+r[0]+"</td><td>"+r[1]+"</td></tr>").join("");
+
+/* Q&A */
+const QA=[
+[1,"P1","What runs today?","The guide reports a synthetic-tested OpenCV prototype.","Name only the features exercised on this laptop and the input source. Show the corresponding run record."],
+[2,"P1","Is it AI?","We model background, track patch centres and compare directions.","There is no trained vehicle classifier. Our proposed product is the reviewed report and decision."],
+[3,"P2","How accurate is it?","Road performance is unknown unless we have an authorised independently scored interval.","If one exists, open scores.csv, read minutes and TP/FP/FN before precision and recall. Frame accuracy hides rare misses."],
+[4,"P2","How do you find misses?","I label the entire original before seeing alerts.","An unmatched distinct real crossing is an FN. A second flag for the same crossing is an FP."],
+[5,"P2","Does it work in rain or darkness?","Performance in those conditions is unknown without separate tests.","Glare, exposure shifts and occlusion affect tracks. Report each condition separately and reject unusable views."],
+[6,"P1","Pedestrian, reversing vehicle or officer diversion?","Motion alone cannot distinguish these cases.","Check context, exceptions and uncertainty with the reviewer. Pause the rule during diversions. (Try the Pedestrian scenario in the demo.)"],
+[7,"P1","Can one arrow cover a bend?","Only where projected travel is consistent.","Restrict the ROI to a straight section or reject the site. Separate zones would need testing."],
+[8,"P1","Can you read plates?","We do not recognise plates.","A manager can count reviewed movements anonymously. Do not promise identification from a clip."],
+[9,"P4","Why not signs, CCTV or guards?","Those may be sufficient at lower cost.","Ask which decision the reviewed service improves over the current process and compare costs."],
+[10,"P4","Closest competitor?","Start with the site's CCTV integrator and security contractor.","Request comparable quotes for reviewed events and reports. Feature and price advantages are unverified."],
+[11,"P3","Can a warning be safe?","Our indicator is desk-only.","A sudden warning could startle a rider. Passive monitoring comes first. Any later sign or activation needs separate authority and independent human-factors and safety review."],
+[12,"P4","Do you prevent crashes?","Crash prevention is unmeasured.","A camera can observe a track and associated interruption. Establishing a safety outcome requires a separate study."],
+[13,"P4","Who fines people?","Only the competent public authority decides enforcement.","We issue no fines or penalties and receive no share. Specific powers and procedures are UNVERIFIED."],
+[14,"P4","Are police cooperating?","There is no documented police partnership.","Ask an authorised liaison about current procedures. A conversation neither authorises collection nor creates integration."],
+[15,"P4","Are the clips admissible?","Admissibility is UNVERIFIED for our clips.","BSA section 63 raises electronic-record questions. Ask a qualified adviser and receiving authority about originals, certificates, device requirements and custody."],
+[16,"P4","Can you film from a footpath?","Permission for that site and use is UNVERIFIED.","The footpath and spotter are safety requirements. Verify control, authorisation, notice, purpose, access and deletion first."],
+[17,"P4","Are you DPDP compliant?","Applicability and compliance are UNVERIFIED.","Have the college and a qualified adviser check the current Act, rules, phased commencement and local requirements. Limit access and agree deletion before capture."],
+[18,"P2","Who sees raw video?","Only authorised named reviewers on restricted local storage under our proposed policy.","Show aggregates or separately cleared redacted material. Log access, backups and deletion."],
+[19,"P2","Why climate tech?","This is a mobility project with an indirect climate hypothesis.","Time matched legal vehicles in vehicle-seconds. Any avoided delay would need an intervention study. Emissions remain unmeasured."],
+[20,"P4","Who pays and how much?","A campus or estate operator is our proposed buyer, and the price is unvalidated.","Test a fixed monthly fee per entrance through a costed offer to the budget holder."],
+[21,"P4","Market size?","The serviceable market is unknown.","In a defined area count entrances with a verified need, permission, viable view and budget owner. Apply an annual fee only after validating it."],
+[22,"P4","What breaks the economics?","Too much review or field support can consume the entire fee.","Count minutes on rejected flags, camera resets, site visits, equipment recovery and downtime."],
+[23,"P4","Why renew?","A manager must use the report for a decision worth the fee.","Record one action and compare total cost and usefulness against the existing process."],
+[24,"P3","Any camera?","Each site needs a suitable fixed calibrated view.","Survey geometry, lighting, hours and permission. Measure setup and review effort at a second site before assuming scale."],
+[25,"P4","What prevents copying?","We have no demonstrated moat.","The rule is reproducible. Consistent evaluation and a useful reviewer service could earn retention if tested."],
+[26,"P4","Why four first-year students?","Each of us owns an artefact another member can reproduce.","Point to detection settings, blind counts, bench checks and a buyer decision or open question."],
+[27,"P4","Why ₹50,000?","It is a ceiling for testing one entrance and a buyer's willingness to pay.","Show five caps and release gates: ₹20,000 camera/compute, ₹8,000 mount/power, ₹5,000 bench sign and safety review, ₹9,000 permitted collection and testing, ₹8,000 travel/admin/contingency. Hold field-hardware funds until scope and comparable quotes exist."],
+[28,"P2","What if there are zero real crossings?","Report the observed duration and false alarms, with recall undefined.","Keep that result. A fresh observation may be justified by the owner. Never stage a crossing."],
+[29,"P4","Why not send everything to police?","Outside sharing needs a separately approved purpose, recipient, channel and retention plan.","Candidates can be false. No transfer is part of the desk demo."],
+[30,"P4","When do you stop?","Stop if permission, safety, manageable review or a useful buyer decision fails.","Compare a cheaper sufficient alternative, document the reason and hold unspent funds."]];
+function renderQA(){const q=document.getElementById("qaSearch").value.toLowerCase(),o=document.getElementById("qaOwner").value;
+  const list=QA.filter(x=>(!o||x[1]===o)&&(!q||(x[2]+x[3]+x[4]).toLowerCase().includes(q)));
+  document.getElementById("qaList").innerHTML=list.length?list.map(x=>'<details class="qa"><summary><span class="chip acc">Q'+x[0]+'</span><span class="chip">'+x[1]+'</span>'+x[2]+'</summary><div class="a"><b>'+x[3]+'</b>'+x[4]+'</div></details>').join(""):'<p class="muted">No match.</p>'}
+document.getElementById("qaSearch").oninput=renderQA;document.getElementById("qaOwner").onchange=renderQA;renderQA();
+
+/* checklist */
+const CHK=["P4: Confirm slot, duration, venue, grant conditions and reporting time. Brief everyone on the evidence branch to use.","P4 + P1: Verify site controller, direction/hours/exceptions, safe footpath, spotter, scope and display rights. If blocked, use tabletop and say road performance is unknown.","P3 + P1: Test legal, reverse and stationary passes; run three consecutive rehearsals or disclose failure. Verify camera selection after reconnecting. Audio off. No attendee filming or rider-facing warning.","P2: Label source type, actual time or offset, minutes observed, frozen settings and exclusions. Lock blind manual sheet before exposing alerts. Check TP + FN = manual real and TP + FP = scored flags.","P2: Reopen one clip externally, inspect pre/post context, event ID, snapshot, CSV and persisted a/r. Show reviewed unique events and observed minutes per bin. Keep toy and road results separate.","P2 + P4: Clear display material separately, keep original restricted, log deletion and backups. Use a sketch when needed.","P4: Check interviews, unanswered contacts, two quotes or pending labels and the five caps. Distinguish permission, interest, trial and purchase.","P3: Pack laptop, power, data cable, webcam, board and adapter. P2: open slides, clip, CSV and still offline on the intended device; check the presentation-cleared backup.","All: Rehearse 30 s, 90 s and 3 min. Demonstrate only what works. Name one failure and explain what measurement would settle the next question."];
+let chkState={};try{chkState=JSON.parse(localStorage.getItem("vgchk")||"{}")}catch(e){}
+function renderChk(){document.getElementById("chkList").innerHTML=CHK.map((t,i)=>'<label class="chk'+(chkState[i]?" done":"")+'" style="flex-direction:row;color:var(--ink);font-size:14px"><input type="checkbox" data-i="'+i+'"'+(chkState[i]?" checked":"")+'><span>'+t+'</span></label>').join("");
+  document.querySelectorAll("#chkList input").forEach(c=>c.onchange=()=>{chkState[c.dataset.i]=c.checked;try{localStorage.setItem("vgchk",JSON.stringify(chkState))}catch(e){}renderChk()})}
+renderChk();
+
+renderEvents();renderChart();renderCsv();renderScore();renderM();
+showTab(location.hash.slice(1)||"problem");
+// test hooks
+window.__vg={S:()=>S,spawn,step,resetRun,score};
+</script>
